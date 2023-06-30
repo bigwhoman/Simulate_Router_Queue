@@ -1,4 +1,5 @@
 import random
+import math
 from queue import PriorityQueue
 import numpy as np
 import matplotlib.pyplot as plt
@@ -6,13 +7,13 @@ import matplotlib.pyplot as plt
 SIMULATION_RUNNING_TIME = 10000
 SERVICE_TIME_LAMBDA = 5
 GENERATOR_TIME_LAMBDA = 5
-MAX_QUEUE_SIZE = 10
+MAX_QUEUE_SIZE = 1
 PROCESSOR_COUNT = 4
 
 class Task:
     def __init__(self, id: int, arrival_time: int):
         self.id = id
-        self.service_time = int(random.expovariate(1 / SERVICE_TIME_LAMBDA))
+        self.service_time = math.ceil(random.expovariate(1 / SERVICE_TIME_LAMBDA))
         self.priority = self.generate_priority()
         self.arrival_time = arrival_time
         self.start_service_time = None
@@ -36,7 +37,7 @@ def task_generator() -> list[Task]:
     tasks: list[Task] = []
     while current_time < SIMULATION_RUNNING_TIME:
         task_id += 1
-        inter_arrival_time = int(random.expovariate(1 / GENERATOR_TIME_LAMBDA))
+        inter_arrival_time = math.ceil(random.expovariate(1 / GENERATOR_TIME_LAMBDA))
         current_time += inter_arrival_time
         tasks.append(Task(task_id, current_time))
     return tasks
@@ -80,7 +81,7 @@ def run_simulation(policy):
     dropped_tasks = 0
     running_task = [None] * PROCESSOR_COUNT
     total_queue_sizes = [0] * PROCESSOR_COUNT
-    total_task_times = [0] * PROCESSOR_COUNT
+    total_queue_times = [0] * PROCESSOR_COUNT
     server_busy_times = [0] * PROCESSOR_COUNT
     tasks = task_generator()
     current_time = 0
@@ -100,7 +101,6 @@ def run_simulation(policy):
                     else:
                         min_queue_idx = task_queues.index(min_queue)
                         total_queue_sizes[min_queue_idx] += 1
-                        total_task_times[min_queue_idx] += task.service_time
                         server_busy_times[min_queue_idx] += task.service_time
                         min_queue[task.priority].put(task)
                 else:
@@ -110,7 +110,6 @@ def run_simulation(policy):
                     else:
                         min_queue_idx = task_queues.index(min_queue)
                         total_queue_sizes[min_queue_idx] += 1
-                        total_task_times[min_queue_idx] += task.service_time
                         server_busy_times[min_queue_idx] += task.service_time
                         min_queue.put(task)
         # Execute new task
@@ -128,6 +127,7 @@ def run_simulation(policy):
                     task.start_service_time = current_time
                     task.finish_time = current_time + task.service_time
                     running_task[core] = task
+                    total_queue_times[core] += current_time - task.arrival_time
         current_time += 1
 
     cook = []
@@ -137,7 +137,7 @@ def run_simulation(policy):
                 running_time = task.finish_time - task.arrival_time
                 cook.append(running_time)
     avg_queue_sizes = [size / len(tasks) for size in total_queue_sizes]
-    avg_time_spent_queues = [task_time / len(tasks) for task_time in total_task_times]
+    avg_time_spent_queues = [task_time / len(tasks) for task_time in total_queue_times]
     avg_server_utilization = [busy_time / current_time for busy_time in server_busy_times]
     return tasks, dropped_tasks, avg_queue_sizes, avg_time_spent_queues, avg_server_utilization, cook
 
@@ -167,6 +167,6 @@ for policy, high_priority_times in high_priority_times_by_policy.items():
 
 plt.xlabel('Time spent in queues')
 plt.ylabel('CDF')
-plt.legend(loc='upper left')
+plt.legend(loc='lower right')
 plt.title('CDF of time spent in queues for high-priority tasks - * 10^-3')
 plt.show()
