@@ -4,7 +4,7 @@ from queue import PriorityQueue
 import numpy as np
 import matplotlib.pyplot as plt
 
-SIMULATION_RUNNING_TIME = 10000
+SIMULATION_RUNNING_TIME = 1000
 SERVICE_TIME_LAMBDA = 5
 GENERATOR_TIME_LAMBDA = 5
 MAX_QUEUE_SIZE = 1
@@ -29,7 +29,7 @@ class Task:
             return 'low'
 
     def __lt__(self, other):
-        return self.service_time < other.service_time
+        return self.arrival_time < other.arrival_time
 
 def task_generator() -> list[Task]:
     current_time = 0
@@ -134,7 +134,7 @@ def run_simulation(policy):
     for task in tasks:
         if task.priority == 'high':
             if task.finish_time != None:
-                running_time = task.finish_time - task.arrival_time
+                running_time = task.start_service_time - task.arrival_time
                 cook.append(running_time)
     avg_queue_sizes = [size / len(tasks) for size in total_queue_sizes]
     avg_time_spent_queues = [task_time / len(tasks) for task_time in total_queue_times]
