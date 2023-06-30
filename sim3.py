@@ -83,11 +83,12 @@ def run_simulation(policy):
     total_task_times = [0] * PROCESSOR_COUNT
     server_busy_times = [0] * PROCESSOR_COUNT
     tasks = task_generator()
-    for current_time in range(SIMULATION_RUNNING_TIME):
+    current_time = 0
+    while current_time < SIMULATION_RUNNING_TIME or any(map(lambda x: x != None, running_task)):
         # Check each core for done tasks
         for core in range(PROCESSOR_COUNT):
             if running_task[core] != None: # if core is running something...
-                if running_task[core].finish_time >= current_time: # and it's done
+                if running_task[core].finish_time <= current_time: # and it's done
                     running_task[core] = None # remove it
         # Enqueue stuff in queue
         for task in tasks:
@@ -127,6 +128,8 @@ def run_simulation(policy):
                     task.start_service_time = current_time
                     task.finish_time = current_time + task.service_time
                     running_task[core] = task
+        current_time += 1
+
     cook = []
     for task in tasks:
         if task.priority == 'high':
@@ -135,7 +138,7 @@ def run_simulation(policy):
                 cook.append(running_time)
     avg_queue_sizes = [size / len(tasks) for size in total_queue_sizes]
     avg_time_spent_queues = [task_time / len(tasks) for task_time in total_task_times]
-    avg_server_utilization = [busy_time / SIMULATION_RUNNING_TIME for busy_time in server_busy_times]
+    avg_server_utilization = [busy_time / current_time for busy_time in server_busy_times]
     return tasks, dropped_tasks, avg_queue_sizes, avg_time_spent_queues, avg_server_utilization, cook
 
 
@@ -155,7 +158,6 @@ scheduling_policies = ['fifo', 'weighted_round_robin', 'non_preemptive_priority'
 high_priority_times_by_policy = {}
 for policy in scheduling_policies:
     dropped_tasks, total_tasks, avg_queue_sizes, avg_time_spent_queues, avg_server_utilization,high_priority_times = run_simulation(policy)
-    print(high_priority_times)
     high_priority_times_by_policy[policy] = high_priority_times
 
 for policy, high_priority_times in high_priority_times_by_policy.items():
